@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Suhel Image Resize Website</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+      margin: 0;
+      background: linear-gradient(135deg, #d0e6f6, #fef6e4);
+      background-attachment: fixed;
+      background-size: cover;
+    }
+
+    h1 {
+      color: #2c3e50;
+      font-size: 28px;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    p {
+      font-size: 16px;
+      color: #333;
+      text-align: center;
+    }
+
+    nav {
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    nav a {
+      margin: 0 10px;
+      text-decoration: none;
+      color: #007BFF;
+      font-weight: bold;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #preview {
+      max-width: 100%;
+      max-height: 300px;
+      margin-top: 20px;
+      display: none;
+      border: 2px solid #333;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    #canvas { display: none; }
+
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+      color: #444;
+    }
+
+    #originalSize {
+      color: #e74c3c;
+    }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 22px; }
+      p { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Welcome to Suhel Image Resize Website</h1>
+  <p><strong>ENGLISH:</strong> Resize image by width, height, and KB.<br>
+  <strong>हिंदी:</strong> इमेज की चौड़ाई, ऊंचाई और साइज (KB) तय करें।</p>
+
+  <nav>
+    <a href="index.html">Home</a> |
+    <a href="about.html">About</a> |
+    <a href="contact.html">Contact</a> |
+    <a href="privacy.html">Privacy</a> |
+    <a href="terms.html">Terms</a>
+  </nav>
+
+  <div class="container">
+    <input type="file" id="imageInput" accept="image/*">
+    <button onclick="removeImage()">❌ Remove Image</button>
+
+    <img id="preview"><br>
+
+    <p id="dimensions">📏 Original Size: <span id="originalSize"></span></p>
+
+    <label for="width">Width (px):</label>
+    <input type="number" id="width">
+
+    <label for="height">Height (px):</label>
+    <input type="number" id="height">
+
+    <label for="targetKB">Target Size in KB:</label>
+    <input type="number" id="targetKB" placeholder="e.g. 150">
+
+    <button onclick="resizeImage()">📐 Resize Image</button>
+
+    <a id="downloadBtn" download="resized-image.jpg" style="display:none;">
+      <button>⬇ Download Resized Image</button>
+    </a>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const imageInput = document.getElementById('imageInput');
+    const preview = document.getElementById('preview');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const originalSize = document.getElementById('originalSize');
+
+    imageInput.addEventListener('change', function () {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          preview.src = e.target.result;
+          preview.onload = () => {
+            document.getElementById('width').value = preview.naturalWidth;
+            document.getElementById('height').value = preview.naturalHeight;
+            originalSize.textContent = `${preview.naturalWidth} x ${preview.naturalHeight}`;
+            preview.style.display = 'block';
+          };
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function resizeImage() {
+      const width = parseInt(document.getElementById('width').value);
+      const height = parseInt(document.getElementById('height').value);
+      const targetKB = parseInt(document.getElementById('targetKB').value);
+
+      if (!width || !height || !targetKB) {
+        alert("Please fill all fields!");
+        return;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(preview, 0, 0, width, height);
+
+      let quality = 1.0;
+      let step = 0.02;
+      let dataUrl = canvas.toDataURL("image/jpeg", quality);
+      let sizeKB = dataURLtoBlob(dataUrl).size / 1024;
+
+      while (sizeKB > targetKB && quality > 0.05) {
+        quality -= step;
+        dataUrl = canvas.toDataURL("image/jpeg", quality);
+        sizeKB = dataURLtoBlob(dataUrl).size / 1024;
+      }
+
+      downloadBtn.href = dataUrl;
+      downloadBtn.style.display = "inline-block";
+    }
+
+    function removeImage() {
+      imageInput.value = '';
+      preview.src = '';
+      preview.style.display = 'none';
+      downloadBtn.style.display = 'none';
+      document.getElementById('width').value = '';
+      document.getElementById('height').value = '';
+      originalSize.textContent = '';
+    }
+
+    function dataURLtoBlob(dataurl) {
+      const arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+      for (let i = 0; i < n; i++) {
+        u8arr[i] = bstr.charCodeAt(i);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+  </script>
+
+</body>
+</html>
